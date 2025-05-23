@@ -1,0 +1,144 @@
+<!DOCTYPE html> 
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista de Livros</title>
+  <link rel="stylesheet" href="listar_livros.css" />
+</head>
+<body>
+  <div class="container">
+    <h2>Lista de Livros</h2>
+    <table id="livrosTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Título</th>
+          <th>Autor</th>
+          <th>ISBN</th>
+          <th>Ano</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <hr />
+
+    <h3>Editar Livro</h3>
+    <form id="editarForm" style="display: none;">
+      <input type="hidden" id="editId" />
+      <label>Título: <input type="text" id="editTitulo" required /></label><br />
+      <label>Autor: <input type="text" id="editAutor" required /></label><br />
+      <label>ISBN: <input type="text" id="editIsbn" required /></label><br />
+      <label>Ano: <input type="number" id="editAno" required /></label><br />
+      <button type="submit">Salvar Alterações</button>
+      <button type="button" onclick="cancelarEdicao()">Cancelar</button>
+    </form>
+
+    <br />
+    <a href="cadastro_livro.html">Cadastrar novo livro</a>
+  </div>
+
+  <script>
+    async function carregarLivros() {
+      try {
+        const response = await fetch('/livros');
+        const livros = await response.json();
+        const tbody = document.querySelector('#livrosTable tbody');
+        tbody.innerHTML = '';
+
+        livros.forEach(livro => {
+          const tr = document.createElement('tr');
+
+          tr.innerHTML = `
+            <td>${livro.id}</td>
+            <td>${livro.titulo}</td>
+            <td>${livro.autor}</td>
+            <td>${livro.isbn}</td>
+            <td>${livro.ano}</td>
+            <td>
+              <button class="edit-btn" data-id="${livro.id}">Editar</button>
+              <button class="delete-btn" data-id="${livro.id}">Excluir</button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+
+        // Eventos de editar
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            const res = await fetch(`/livros/${id}`);
+            if (!res.ok) {
+              alert('Erro ao buscar livro para edição.');
+              return;
+            }
+
+            const livro = await res.json();
+            document.getElementById('editId').value = livro.id;
+            document.getElementById('editTitulo').value = livro.titulo;
+            document.getElementById('editAutor').value = livro.autor;
+            document.getElementById('editIsbn').value = livro.isbn;
+            document.getElementById('editAno').value = livro.ano;
+
+            document.getElementById('editarForm').style.display = 'block';
+          });
+        });
+
+        // Eventos de excluir
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            if (confirm('Deseja realmente excluir este livro?')) {
+              const res = await fetch(`/livros/${id}`, { method: 'DELETE' });
+              if (res.status === 204) {
+                alert('Livro excluído com sucesso.');
+                carregarLivros();
+              } else {
+                alert('Erro ao excluir livro.');
+              }
+            }
+          });
+        });
+
+      } catch (error) {
+        alert('Erro ao carregar livros.');
+      }
+    }
+
+    // Enviar edição
+    document.getElementById('editarForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editId').value;
+      const livroAtualizado = {
+        titulo: document.getElementById('editTitulo').value,
+        autor: document.getElementById('editAutor').value,
+        isbn: document.getElementById('editIsbn').value,
+        ano: parseInt(document.getElementById('editAno').value)
+      };
+
+      const res = await fetch(`/livros/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(livroAtualizado)
+      });
+
+      if (res.ok) {
+        alert('Livro atualizado com sucesso.');
+        document.getElementById('editarForm').style.display = 'none';
+        carregarLivros();
+      } else {
+        alert('Erro ao atualizar livro.');
+      }
+    });
+
+    function cancelarEdicao() {
+      document.getElementById('editarForm').style.display = 'none';
+    }
+
+    window.onload = carregarLivros;
+  </script>
+</body>
+</html>
